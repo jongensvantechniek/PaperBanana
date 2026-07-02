@@ -1,0 +1,146 @@
+@using PaperBanana.Web.Services
+@inject GenerationService Generation
+
+<div class="layout">
+    <aside class="sidebar">
+        <h2>✨ Refinement Settings</h2>
+
+        <label>Target Resolution</label>
+        <select @bind="_resolution">
+            <option value="2K">2K</option>
+            <option value="4K">4K</option>
+        </select>
+
+        <label>Aspect Ratio</label>
+        <select @bind="_aspectRatio">
+            <option value="21:9">21:9</option>
+            <option value="16:9">16:9</option>
+            <option value="3:2">3:2</option>
+        </select>
+
+        @if (!Generation.HasGoogleKey || string.IsNullOrEmpty(Generation.DefaultImageModelName))
+        {
+            <p class="warning">⚠️ Requires a Google API key and an <code>image_model_name</code> in
+                <code>configs/model_config.yaml</code>.</p>
+        }
+    </aside>
+
+    <section class="content">
+        <h2>📤 Upload Image</h2>
+        <p class="hint">Upload a generated candidate or any diagram, describe the changes, and generate a
+            high-resolution version.</p>
+
+        <InputFile OnChange="OnFileSelected" accept="image/png,image/jpeg" />
+
+        @if (_uploadedBase64 is not null)
+        {
+            <div class="input-grid">
+                <div>
+                    <h3>Original Image</h3>
+                    <img src="data:image/jpeg;base64,@_uploadedBase64" alt="Original" />
+                </div>
+                <div>
+                    <h3>Edit Instructions</h3>
+                    <textarea rows="8"
+                              placeholder="E.g. 'Keep everything the same but output in higher resolution' or 'Make the text larger and bolder'"
+                              @bind="_editPrompt"></textarea>
+                    <button class="btn-primary" disabled="@_isRefining" @onclick="RefineAsync">
+                        @(_isRefining ? "Refining…" : "✨ Refine Image")
+                    </button>
+                </div>
+            </div>
+        }
+
+        @if (_error is not null)
+        {
+            <p class="error">@_error</p>
+        }
+
+        @if (_refinedBase64 is not null)
+        {
+            <h2>🎨 Refined Result (@_resolution)</h2>
+            <div class="input-grid">
+                <div>
+                    <h3>Before</h3>
+                    <img src="data:image/jpeg;base64,@_uploadedBase64" alt="Before" />
+                </div>
+                <div>
+                    <h3>After (@_resolution)</h3>
+                    <img src="data:image/jpeg;base64,@_refinedBase64" alt="After" />
+                    <a class="btn-download" download="refined_@(_resolution).jpg"
+                       href="data:image/jpeg;base64,@_refinedBase64">⬇️ Download @_resolution Image</a>
+                </div>
+            </div>
+        }
+    </section>
+</div>
+
+@code {
+    private const long MaxUploadBytes = 32 * 1024 * 1024;
+
+    private string _resolution = "2K";
+    private string _aspectRatio = "21:9";
+    private string _editPrompt = string.Empty;
+
+    private byte[]? _uploadedBytes;
+    private string? _uploadedBase64;
+    private string? _refinedBase64;
+    private bool _isRefining;
+    private string? _error;
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        _error = null;
+        _refinedBase64 = null;
+        try
+        {
+            using var stream = e.File.OpenReadStream(MaxUploadBytes);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            _uploadedBytes = ms.ToArray();
+            _uploadedBase64 = Convert.ToBase64String(_uploadedBytes);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to read file: {ex.Message}";
+        }
+    }
+
+    private async Task RefineAsync()
+    {
+        _error = null;
+        if (_uploadedBytes is null)
+        {
+            _error = "Please upload an image first.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_editPrompt))
+        {
+            _error = "Please provide edit instructions!";
+            return;
+        }
+
+        _isRefining = true;
+        try
+        {
+            var refined = await Generation.RefineImageAsync(_uploadedBytes, _editPrompt, _aspectRatio, _resolution);
+            if (refined is not null)
+            {
+                _refinedBase64 = Convert.ToBase64String(refined);
+            }
+            else
+            {
+                _error = "No image data returned from the model.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Error during refinement: {ex.Message}";
+        }
+        finally
+        {
+            _isRefining = false;
+        }
+    }
+}

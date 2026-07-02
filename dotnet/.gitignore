@@ -1,0 +1,14 @@
+# .NET build output
+bin/
+obj/
+*.user
+
+# Local secrets / config
+**/appsettings.*.local.json
+
+# Generation results
+results/
+
+# Python sidecar
+plot-sidecar/__pycache__/
+plot-sidecar/.venv/

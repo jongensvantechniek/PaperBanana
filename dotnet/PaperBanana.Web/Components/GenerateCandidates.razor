@@ -1,0 +1,227 @@
+@using PaperBanana.Core.Models
+@using PaperBanana.Web.Services
+@inject GenerationService Generation
+
+<div class="layout">
+    <aside class="sidebar">
+        <h2>⚙️ Generation Settings</h2>
+
+        <label>Pipeline Mode</label>
+        <select @bind="_expMode">
+            <option value="demo_planner_critic">demo_planner_critic</option>
+            <option value="demo_full">demo_full</option>
+        </select>
+        <p class="hint">@PipelineInfo</p>
+
+        <label>Retrieval Setting</label>
+        <select @bind="_retrievalSetting">
+            <option value="auto">auto</option>
+            <option value="manual">manual</option>
+            <option value="random">random</option>
+            <option value="none">none</option>
+        </select>
+
+        <label>Number of Candidates</label>
+        <input type="number" min="1" max="20" @bind="_numCandidates" />
+
+        <label>Aspect Ratio</label>
+        <select @bind="_aspectRatio">
+            <option value="21:9">21:9</option>
+            <option value="16:9">16:9</option>
+            <option value="3:2">3:2</option>
+        </select>
+
+        <label>Max Critic Rounds</label>
+        <input type="number" min="1" max="5" @bind="_maxCriticRounds" />
+
+        <label>Model Name (optional)</label>
+        <input type="text" placeholder="@ModelPlaceholder" @bind="_modelName" />
+
+        @if (!Generation.HasGoogleKey)
+        {
+            <p class="warning">⚠️ No Google API key configured. Set <code>GOOGLE_API_KEY</code> or edit
+                <code>configs/model_config.yaml</code>.</p>
+        }
+    </aside>
+
+    <section class="content">
+        <h2>📝 Input</h2>
+        <div class="input-actions">
+            <button class="btn-secondary" @onclick="LoadExample">Load Example (PaperBanana Framework)</button>
+        </div>
+
+        <div class="input-grid">
+            <div>
+                <label>Method Section Content (Markdown recommended)</label>
+                <textarea rows="12" placeholder="Paste the method section content here..." @bind="_methodContent"></textarea>
+            </div>
+            <div>
+                <label>Figure Caption</label>
+                <textarea rows="12" placeholder="Enter the figure caption..." @bind="_caption"></textarea>
+            </div>
+        </div>
+
+        <button class="btn-primary" disabled="@_isGenerating" @onclick="GenerateAsync">
+            @(_isGenerating ? "Generating…" : "🚀 Generate Candidates")
+        </button>
+
+        @if (_isGenerating)
+        {
+            <button class="btn-secondary" @onclick="Cancel">Cancel</button>
+        }
+
+        @if (_error is not null)
+        {
+            <p class="error">@_error</p>
+        }
+
+        @if (_isGenerating || _results.Count > 0)
+        {
+            <div class="status">
+                <span>@_results.Count / @_numCandidates candidates completed</span>
+            </div>
+        }
+
+        @if (_results.Count > 0)
+        {
+            <h2>🎨 Generated Candidates</h2>
+            <div class="candidate-grid">
+                @foreach (var item in _results.OrderBy(r => r.CandidateId))
+                {
+                    <div class="candidate-card">
+                        @{
+                            var finalImage = ResultInspector.GetFinalImageBase64(item.Data, _submittedMode);
+                            var stages = ResultInspector.GetEvolutionStages(item.Data, _submittedMode);
+                        }
+                        @if (!string.IsNullOrEmpty(finalImage))
+                        {
+                            <img src="data:image/jpeg;base64,@finalImage" alt="Candidate @item.CandidateId" />
+                            <div class="candidate-actions">
+                                <span>Candidate @item.CandidateId</span>
+                                <a class="btn-download" download="candidate_@(item.CandidateId).jpg"
+                                   href="data:image/jpeg;base64,@finalImage">⬇️ Download</a>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="candidate-empty">No image generated for Candidate @item.CandidateId</div>
+                        }
+
+                        @if (stages.Count > 1)
+                        {
+                            <details>
+                                <summary>🔄 Evolution timeline (@stages.Count stages)</summary>
+                                @foreach (var stage in stages)
+                                {
+                                    <div class="stage">
+                                        <h4>@stage.Name</h4>
+                                        <p class="hint">@stage.Description</p>
+                                        @if (!string.IsNullOrEmpty(stage.ImageBase64))
+                                        {
+                                            <img src="data:image/jpeg;base64,@stage.ImageBase64" alt="@stage.Name" />
+                                        }
+                                        @if (!string.IsNullOrEmpty(stage.Suggestions) &&
+                                             stage.Suggestions != "No changes needed.")
+                                        {
+                                            <details>
+                                                <summary>💡 Critic suggestions</summary>
+                                                <pre>@stage.Suggestions</pre>
+                                            </details>
+                                        }
+                                    </div>
+                                }
+                            </details>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </section>
+</div>
+
+@code {
+    private string _expMode = "demo_planner_critic";
+    private string _retrievalSetting = "auto";
+    private int _numCandidates = 6;
+    private string _aspectRatio = "16:9";
+    private int _maxCriticRounds = 3;
+    private string _modelName = string.Empty;
+
+    private string _methodContent = string.Empty;
+    private string _caption = string.Empty;
+
+    private bool _isGenerating;
+    private string? _error;
+    private string _submittedMode = "demo_planner_critic";
+
+    private readonly List<CandidateResult> _results = new();
+    private CancellationTokenSource? _cts;
+
+    private string PipelineInfo => _expMode == "demo_full"
+        ? "Retriever → Planner → Stylist → Visualizer → Critic → Visualizer"
+        : "Planner → Visualizer → Critic → Visualizer";
+
+    private string ModelPlaceholder =>
+        string.IsNullOrEmpty(Generation.DefaultModelName) ? "e.g. gemini-3-pro-preview" : Generation.DefaultModelName;
+
+    private sealed record CandidateResult(int CandidateId, QueryData Data);
+
+    private async Task GenerateAsync()
+    {
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_methodContent) || string.IsNullOrWhiteSpace(_caption))
+        {
+            _error = "Please provide both method content and caption!";
+            return;
+        }
+
+        _results.Clear();
+        _isGenerating = true;
+        _submittedMode = _expMode;
+        _cts = new CancellationTokenSource();
+
+        var request = new GenerateRequest
+        {
+            MethodContent = _methodContent,
+            Caption = _caption,
+            ExpMode = _expMode,
+            RetrievalSetting = _retrievalSetting,
+            NumCandidates = _numCandidates,
+            AspectRatio = _aspectRatio,
+            MaxCriticRounds = _maxCriticRounds,
+            ModelName = _modelName,
+        };
+
+        try
+        {
+            await Generation.GenerateCandidatesAsync(request, async (result, idx) =>
+            {
+                var candidateId = result.GetInt("candidate_id", idx);
+                _results.Add(new CandidateResult(candidateId, result));
+                await InvokeAsync(StateHasChanged);
+            }, _cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Cancelled by the user.
+        }
+        catch (Exception ex)
+        {
+            _error = $"Error during processing: {ex.Message}";
+        }
+        finally
+        {
+            _isGenerating = false;
+            _cts?.Dispose();
+            _cts = null;
+        }
+    }
+
+    private void Cancel() => _cts?.Cancel();
+
+    private void LoadExample()
+    {
+        _methodContent = ExampleContent.Method;
+        _caption = ExampleContent.Caption;
+    }
+}

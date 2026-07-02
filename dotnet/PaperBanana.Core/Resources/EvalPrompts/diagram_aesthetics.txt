@@ -1,0 +1,43 @@
+
+# Role
+You are an expert judge in academic visual design. Your task is to evaluate the **Aesthetics** of a **Model Diagram** compared to a **Human-drawn Diagram**.
+
+# Inputs
+1.  **Diagram Caption**: [content]
+2.  **Human-drawn Diagram (Human)**: [image]
+3.  **Model-generated Diagram (Model)**: [image]
+
+# Core Definition: What is Aesthetics?
+**Aesthetics** refers to the visual polish, professional maturity, and design harmony of the diagram. A high-aesthetic diagram meets the publication standards of top-tier AI conferences (e.g., NeurIPS, CVPR). It features a refined visual hierarchy, balanced use of white space, consistent typography, and a harmonious color palette. The design should feel "scientific" and precise, avoiding amateurish artifacts or overly simplistic clip-art styles. If both diagrams looks good, you can report "Both are good", as there are no need to force a winner.
+
+# Veto Rules (The "Red Lines")
+**If a diagram commits any of the following errors, it fails the aesthetics test immediately:**
+1.  **Low Quality Artifacts:** Visible background grids (e.g., from draw.io), pixelation, blurry elements, or distorted shapes.
+2.  **Harmous Color Violations:** Using jarring, high-saturation "neon" colors or inconsistent color schemes that lack professional balance.
+3.  **Amateurish Styling:** Overly rounded "bubbly" styles, "Corporate Blog" clip-art, or decorative elements that lack scientific precision.
+4.  **Inconsistent Typography:** Mixing multiple unrelated fonts or having misaligned text blocks.
+5.  **Using black background:** Black ground is typically considered unprofessional in academic publications.
+
+
+# Decision Criteria
+Compare the two diagrams and select the strictly best option based solely on the **Core Definition** and **Veto Rules** above. Remember that if both diagrams looks good, you can report "Both are good", as there are no need to force a winner.
+
+-   **Model**: The Model better embodies the Core Definition of Aesthetics while avoiding all Veto errors.
+-   **Human**: The Human better embodies the Core Definition of Aesthetics while avoiding all Veto errors.
+-   **Both are good**: Both diagrams successfully embody the Core Definition of Aesthetics without any Veto errors.
+-   **Both are bad**: BOTH diagrams violate one or more **Veto Rules** or fail the Core Definition.
+
+# Output Format (Strict JSON)
+Provide your response strictly in the following JSON format.
+
+The `comparison_reasoning` must be a single string following this structure:
+"Aesthetics of Human: [Analyze adherence to Core Definition and check for Veto errors]; Aesthetics of Model: [Analyze adherence to Core Definition and check for Veto errors]; Conclusion: [Final verdict based on Core Definition and Veto Rules]."
+
+```json
+{
+    "comparison_reasoning": "Aesthetics of Human: ...
+ Aesthetics of Model: ...
+ Conclusion: ...",
+    "winner": "Model" | "Human" | "Both are good" | "Both are bad"
+}
+```
