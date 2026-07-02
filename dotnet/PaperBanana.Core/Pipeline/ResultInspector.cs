@@ -14,7 +14,7 @@
 
 using PaperBanana.Core.Models;
 
-namespace PaperBanana.Web.Services;
+namespace PaperBanana.Core.Pipeline;
 
 /// <summary>One stage of a candidate's evolution timeline.</summary>
 public sealed record EvolutionStage(string Name, string? ImageBase64, string Description, string? Suggestions);

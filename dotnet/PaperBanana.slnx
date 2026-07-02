@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="PaperBanana.Cli/PaperBanana.Cli.csproj" />
   <Project Path="PaperBanana.Core/PaperBanana.Core.csproj" />
+  <Project Path="PaperBanana.Tests/PaperBanana.Tests.csproj" />
   <Project Path="PaperBanana.Web/PaperBanana.Web.csproj" />
 </Solution>
