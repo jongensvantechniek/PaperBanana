@@ -1,0 +1,32 @@
+@page "/"
+@rendermode InteractiveServer
+
+<PageTitle>PaperBanana</PageTitle>
+
+<div class="tabs">
+    <button class="tab @(_activeTab == Tab.Generate ? "tab--active" : "")"
+            @onclick="() => _activeTab = Tab.Generate">
+        📊 Generate Candidates
+    </button>
+    <button class="tab @(_activeTab == Tab.Refine ? "tab--active" : "")"
+            @onclick="() => _activeTab = Tab.Refine">
+        ✨ Refine Image
+    </button>
+</div>
+
+<div class="tab-panel">
+    @if (_activeTab == Tab.Generate)
+    {
+        <GenerateCandidates />
+    }
+    else
+    {
+        <RefineImage />
+    }
+</div>
+
+@code {
+    private enum Tab { Generate, Refine }
+
+    private Tab _activeTab = Tab.Generate;
+}

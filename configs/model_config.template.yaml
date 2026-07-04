@@ -24,3 +24,9 @@ api_keys:
   google_api_key: "" # e.g. "xxxxxxxxxxxxx"
   openai_api_key: ""
   anthropic_api_key: ""
+
+# Services (used by the .NET 10 port; ignored by the Python implementation).
+services:
+  # URL of the matplotlib plot-execution sidecar (dotnet/plot-sidecar/plot_service.py).
+  # Only needed for the "plot" task, whose generated matplotlib code runs there.
+  plot_service_url: "http://localhost:8500"

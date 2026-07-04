@@ -1,0 +1,54 @@
+
+# Role
+You are an expert judge in academic data visualization. Your task is to evaluate the **Readability** of a **Model-Generated Plot** compared to a **Human-Drawn Plot**.
+
+# Inputs
+1.  **Plot Brief Description**: [a brief description of the plot type and content]
+2.  **Human-Drawn Plot (Human)**: [image]
+3.  **Model-Generated Plot (Model)**: [image]
+
+# Core Definition: What is Readability?
+**Readability** measures how easily a reader can **extract and interpret** the data and key findings from a plot. A readable plot must have clear axis labels with units, legible text, distinguishable colors/markers, an understandable legend, and minimal visual interference. The goal is instant comprehension without confusion.
+
+**Important**: Readability is a **baseline requirement**. Most well-constructed academic plots are readable. Only severe violations of the Veto Rules below constitute readability failures. Minor stylistic differences should NOT be judged as readability issues.
+
+# Veto Rules (The "Red Lines")
+**If a plot commits any of the following errors, it fails the readability test immediately:**
+1.  **Visual Noise & Extraneous Elements:**
+    *   The Figure Title (e.g., "Figure 3: ...") or full caption text rendered within the image pixels.
+        * *Note:* Subfigure labels like (a), (b) or panel titles are **permitted** and encouraged.
+    *   Watermarks, logos, or other meta-information cluttering the plot area.
+2.  **Missing or Unlabeled Axes:** Axes without labels or units, making it impossible to understand what is being measured.
+3.  **Illegible Text:** Font sizes too small to read, text overlapping with data points/gridlines/other elements, or text with insufficient contrast against the background (e.g., black text on black background, dark text on dark background, white text on white background).
+4.  **Poor Color Discrimination:** Using colors that are too similar to distinguish between data series, or using color schemes that are not colorblind-friendly when multiple series are present.
+5.  **No Legend (when needed):** Multiple data series without a legend or with an unclear legend that doesn't identify what each line/bar represents.
+6.  **Low Contrast:** Data elements (lines, bars, markers) that blend into the background, making them invisible or very hard to see.
+7.  **Invisible Data Elements:** Data points, lines, or bars that are too small, too thin, or too transparent to be clearly visible.
+8.  **Legend Blocking Data:** Legend positioned over critical data points or trends, obscuring important information.
+
+# Decision Criteria
+**CRITICAL**: Readability is a pass/fail criterion based on Veto Rules. If neither plot violates any Veto Rules, you **MUST** default to "Both are good".
+
+Compare the two plots and select the strictly best option based solely on the **Core Definition** and **Veto Rules** above:
+
+-   **Both are good**: **DEFAULT CHOICE**. Use this whenever both plots avoid all Veto Rules and are reasonably easy to interpret. Do NOT pick a winner based on minor stylistic preferences.
+-   **Model**: Use ONLY if the Model avoids Veto violations while the Human commits one or more, OR if the Model is dramatically more readable.
+-   **Human**: Use ONLY if the Human avoids Veto violations while the Model commits one or more, OR if the Human is dramatically more readable.
+-   **Both are bad**: Use ONLY if BOTH plots violate one or more Veto Rules.
+
+**Reminder**: If you find yourself hesitating between "Model"/"Human" and "Both are good", choose "Both are good". Reserve winner selection for cases with clear, substantial readability differences.
+
+# Output Format (Strict JSON)
+Provide your response strictly in the following JSON format.
+
+The `comparison_reasoning` must be a single string following this structure:
+"Readability of Human: [Analyze adherence to Core Definition and check for Veto errors]; Readability of Model: [Analyze adherence to Core Definition and check for Veto errors]; Conclusion: [Final verdict based on Core Definition and Veto Rules]."
+
+```json
+{
+    "comparison_reasoning": "Readability of Human: ...
+ Readability of Model: ...
+ Conclusion: ...",
+    "winner": "Model" | "Human" | "Both are good" | "Both are bad"
+}
+```
